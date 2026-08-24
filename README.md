@@ -1,0 +1,1 @@
+## Vector Indexed AsterixDB RAG
