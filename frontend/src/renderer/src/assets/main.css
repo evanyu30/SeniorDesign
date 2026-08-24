@@ -1,0 +1,595 @@
+/* ============================================================
+   Renderer stylesheet
+   A quiet, print-inspired interface for retrieval-augmented
+   research: paper-toned surfaces, typeset prose, hairline
+   rules, and instrument-panel chrome.
+   ============================================================ */
+
+/* ---------- 1. Design tokens ---------- */
+
+:root {
+  /* Surfaces — warm archival paper */
+  --paper: #f5f3ee;
+  --paper-raised: #fdfcf9;
+  --paper-sunken: #efece4;
+
+  /* Ink */
+  --ink: #1b1e1d;
+  --ink-soft: #63696a;
+  --ink-faint: #9aa09f;
+
+  /* Rules */
+  --rule: #e0dcd2;
+  --rule-strong: #c9c4b7;
+
+  /* Accents — viridian (primary) + ochre (citation) */
+  --accent: #1f5d54;
+  --accent-bright: #2b7a6e;
+  --accent-wash: rgba(31, 93, 84, 0.08);
+  --ochre: #8a5a1c;
+
+  /* Typography */
+  --font-serif: ui-serif, 'New York', 'Iowan Old Style', Charter, 'Palatino Linotype',
+    'Book Antiqua', Georgia, 'Times New Roman', serif;
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, Inter, 'Segoe UI', Roboto,
+    system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, 'Cascadia Mono', 'Roboto Mono',
+    Consolas, monospace;
+
+  /* Metrics */
+  --column: 760px;
+  --gutter: 32px;
+  --radius: 4px;
+  --radius-lg: 8px;
+
+  /* Elevation — barely there, like paper on paper */
+  --lift: 0 1px 2px rgba(27, 30, 29, 0.05), 0 6px 18px rgba(27, 30, 29, 0.045);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0f1315;
+    --paper-raised: #171c1f;
+    --paper-sunken: #0b0e10;
+
+    --ink: #e7e5de;
+    --ink-soft: #9aa3a2;
+    --ink-faint: #6a7473;
+
+    --rule: #262d30;
+    --rule-strong: #39423f;
+
+    --accent: #74c3b3;
+    --accent-bright: #8fd6c6;
+    --accent-wash: rgba(116, 195, 179, 0.1);
+    --ochre: #cfa25c;
+
+    --lift: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 22px rgba(0, 0, 0, 0.28);
+  }
+}
+
+/* ---------- 2. Base ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink);
+  background-color: var(--paper);
+  /* a single soft wash of light from above — nothing else */
+  background-image: radial-gradient(130% 80% at 50% -20%, var(--accent-wash) 0%, transparent 62%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 3. Transcript ---------- */
+
+.messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 44px 0 28px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+.messages::-webkit-scrollbar {
+  width: 11px;
+}
+
+.messages::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border-radius: 99px;
+  border: 4px solid transparent;
+  background-clip: content-box;
+}
+
+.messages::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-faint);
+  background-clip: content-box;
+}
+
+/* Empty state — the title page */
+.messages:not(:has(.msg)) {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding-bottom: 8vh;
+  text-align: center;
+}
+
+.messages:not(:has(.msg))::before {
+  content: 'Retrieval-Augmented Inquiry';
+  font-family: var(--font-serif);
+  font-size: 27px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.messages:not(:has(.msg))::after {
+  content: 'Pose a question to search the indexed corpus — papers, figures, and notes — and receive a sourced synthesis.';
+  max-width: 46ch;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.7;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+/* Shared message frame */
+.msg {
+  max-width: var(--column);
+  margin: 0 auto 26px;
+  padding: 0 var(--gutter);
+  word-break: break-word;
+  animation: rise 0.26s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.msg::before {
+  display: block;
+  margin-bottom: 7px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+}
+
+/* --- Query: a tabbed index card, right-filed --- */
+
+.msg.user {
+  position: relative;
+  width: fit-content;
+  max-width: min(74%, 560px);
+  margin-top: 8px;
+  margin-right: max(var(--gutter), calc(50% - var(--column) / 2));
+  margin-left: auto;
+  padding: 12px 16px 13px;
+  white-space: pre-wrap;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-top: 2px solid var(--accent);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--lift);
+}
+
+/* Label sits outside the card — above the accent rule, flush to its right edge */
+.msg.user::before {
+  content: 'Query';
+  position: absolute;
+  right: -1px;
+  bottom: calc(100% + 8px); /* clears the 2px accent rule, then 6px of air */
+  margin: 0;
+  white-space: nowrap;
+  color: var(--accent);
+}
+
+/* --- Response: typeset prose against a fading rule --- */
+
+.msg.assistant {
+  margin-left: max(var(--gutter), calc(50% - var(--column) / 2));
+  margin-right: auto;
+  padding-left: 26px;
+  padding-right: var(--gutter);
+  border-left: 2px solid var(--accent);
+  border-image: linear-gradient(
+      180deg,
+      var(--accent) 0%,
+      color-mix(in srgb, var(--accent) 35%, transparent) 38%,
+      transparent 100%
+    )
+    1;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.72;
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+.msg.assistant::before {
+  content: 'Response';
+  color: var(--ink-faint);
+}
+
+/* Streaming — a patient blinking rule */
+.msg.assistant:empty::after {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 1.05em;
+  vertical-align: text-bottom;
+  background: var(--accent);
+  opacity: 0.75;
+  animation: blink 1.15s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ---------- 4. Typeset markdown ---------- */
+
+.msg.assistant > * {
+  margin-bottom: 14px;
+}
+
+.msg.assistant > *:last-child {
+  margin-bottom: 0;
+}
+
+.msg.assistant h1,
+.msg.assistant h2,
+.msg.assistant h3,
+.msg.assistant h4 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+  margin-top: 26px;
+}
+
+.msg.assistant h1 {
+  font-size: 1.22em;
+}
+
+.msg.assistant h2 {
+  font-size: 1.1em;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.msg.assistant h3,
+.msg.assistant h4 {
+  font-size: 1em;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.msg.assistant > *:first-child {
+  margin-top: 0;
+}
+
+.msg.assistant ul,
+.msg.assistant ol {
+  padding-left: 24px;
+}
+
+.msg.assistant li {
+  margin-bottom: 5px;
+}
+
+.msg.assistant li::marker {
+  color: var(--ink-faint);
+}
+
+.msg.assistant strong {
+  font-weight: 640;
+}
+
+.msg.assistant hr {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 22px 0;
+}
+
+/* Citations and links — ochre, in the margin tradition */
+.msg.assistant a {
+  color: var(--ochre);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2.5px;
+  text-decoration-color: color-mix(in srgb, var(--ochre) 45%, transparent);
+  transition: text-decoration-color 0.15s ease;
+}
+
+.msg.assistant a:hover {
+  text-decoration-color: var(--ochre);
+}
+
+/* Code — the apparatus */
+.msg.assistant code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  padding: 1.5px 5px;
+  border-radius: 3px;
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+}
+
+.msg.assistant pre {
+  padding: 15px 17px;
+  border-radius: var(--radius-lg);
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.msg.assistant pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.8em;
+  line-height: 1.6;
+}
+
+/* Pull quotes / extracted passages */
+.msg.assistant blockquote {
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid var(--rule-strong);
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+/* Tables — booktabs: horizontal rules only */
+.msg.assistant table {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 0.84em;
+  line-height: 1.5;
+  border-top: 1.5px solid var(--ink-soft);
+  border-bottom: 1.5px solid var(--ink-soft);
+}
+
+.msg.assistant th,
+.msg.assistant td {
+  padding: 7px 16px 7px 0;
+  border: 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.msg.assistant th {
+  font-weight: 600;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.msg.assistant tbody tr + tr td {
+  border-top: 1px solid var(--rule);
+}
+
+/* Retrieved figures — mounted like plates */
+.msg.assistant img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  padding: 6px;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+}
+
+/* ---------- 5. Instrument panel ---------- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: min(100%, calc(var(--column) + 2 * var(--gutter)));
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.toolbar::before {
+  content: 'Engine';
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  user-select: none;
+}
+
+.toolbar select {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--paper-raised) 60%, transparent);
+  border: 1px solid var(--rule);
+  border-radius: 99px;
+  padding: 4px 10px;
+  cursor: pointer;
+  /* no background-color transition — it would animate on a theme flip */
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.toolbar select:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--rule-strong);
+  background: var(--paper-raised);
+}
+
+.toolbar select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- 6. Query bar ---------- */
+
+.composer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: min(100%, calc(var(--column) + 2 * var(--gutter)));
+  margin: 0 auto;
+  padding: 10px var(--gutter) 24px;
+}
+
+.composer input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-lg);
+  outline: none;
+  box-shadow: var(--lift);
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.composer input::placeholder {
+  color: var(--ink-faint);
+}
+
+.composer input:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--rule-strong));
+}
+
+.composer input:focus {
+  border-color: var(--accent);
+  box-shadow:
+    var(--lift),
+    0 0 0 3px var(--accent-wash);
+}
+
+.composer button {
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-raised);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  box-shadow: var(--lift);
+  /* no background-color transition — it would animate on a theme flip */
+  transition:
+    transform 0.1s ease,
+    opacity 0.15s ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .composer button {
+    color: var(--paper-sunken);
+  }
+}
+
+.composer button:hover {
+  background: var(--accent-bright);
+}
+
+.composer button:active {
+  transform: translateY(1px);
+}
+
+.composer button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ---------- 7. Accessibility ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Narrow windows: give the prose its margins back */
+@media (max-width: 620px) {
+  :root {
+    --gutter: 20px;
+  }
+
+  .msg.assistant {
+    padding-left: 18px;
+  }
+}

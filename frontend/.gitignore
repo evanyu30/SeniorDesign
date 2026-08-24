@@ -1,0 +1,138 @@
+# =============================================================================
+# LLMChatUI — Electron + React + TypeScript (electron-vite / electron-builder)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+node_modules/
+
+# -----------------------------------------------------------------------------
+# Build & compile output
+# -----------------------------------------------------------------------------
+# electron-vite compiled main/preload/renderer (see package.json "main")
+out/
+
+# electron-builder packaged apps, installers, and unpacked builds
+dist/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# Environment & secrets
+# -----------------------------------------------------------------------------
+# API keys, tokens, and local overrides (never commit)
+.env
+.env.*
+!.env.example
+
+# Common credential / signing key patterns
+*.pem
+*.p12
+*.pfx
+*.key
+credentials.json
+secrets.json
+
+# macOS code signing / notarization (if added later)
+*.provisionprofile
+AuthKey_*.p8
+
+# -----------------------------------------------------------------------------
+# Tooling caches
+# -----------------------------------------------------------------------------
+.eslintcache
+.prettiercache
+.cache/
+*.cache
+
+# Vite dependency pre-bundling (also lives under node_modules/.vite)
+.vite/
+
+# -----------------------------------------------------------------------------
+# Logs & diagnostics
+# -----------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# -----------------------------------------------------------------------------
+# electron-builder generated files
+# -----------------------------------------------------------------------------
+# Local dev auto-update config (generated during development)
+dev-app-update.yml
+
+# electron-builder debug / effective config dumps
+builder-effective-config.yaml
+builder-debug.yml
+
+# -----------------------------------------------------------------------------
+# Testing & coverage (if added later)
+# -----------------------------------------------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+
+# -----------------------------------------------------------------------------
+# OS-generated files
+# -----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# -----------------------------------------------------------------------------
+# Editor & IDE (user-specific only; shared .vscode/ is committed)
+# -----------------------------------------------------------------------------
+.idea/
+*.iml
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# VS Code user/workspace overrides (keep team settings in .vscode/)
+.vscode/*.code-workspace
+.vscode/settings.local.json
+
+# Cursor / local editor state
+.cursor/
+
+# -----------------------------------------------------------------------------
+# Local runtime data (common for chat / desktop apps)
+# -----------------------------------------------------------------------------
+# Uncomment or extend if you persist chats or settings locally:
+# *.sqlite
+# *.sqlite3
+# *.db
+# data/
+# storage/
+
+# -----------------------------------------------------------------------------
+# Misc temporary files
+# -----------------------------------------------------------------------------
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.orig
