@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment — recreate it with `pip install -r requirements.txt`
+.venv/
+venv/
+
+# Test and lint caches
+.pytest_cache/
+.ruff_cache/
+
+# Secrets. Commit .env.example instead, with the keys blank.
+.env
+
+# macOS
+.DS_Store
