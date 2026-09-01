@@ -1,2 +1,8 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
+httpx>=0.27
+
+# Real embeddings. Pulls in torch -- the install is a few hundred MB and
+# takes a few minutes the first time. The model itself downloads on first
+# use (encode() call), not on pip install -- needs network for that one time.
+sentence-transformers>=3.0
