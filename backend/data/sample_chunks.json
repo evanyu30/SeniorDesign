@@ -1,0 +1,42 @@
+[
+  {
+    "paper_id": "p1",
+    "title": "Introduction to Vector Databases",
+    "authors": "A. Author",
+    "year": 2023,
+    "page": 1,
+    "text": "Vector databases store high-dimensional embeddings and support approximate or exact nearest-neighbor search. They are commonly used to power retrieval-augmented generation systems."
+  },
+  {
+    "paper_id": "p2",
+    "title": "Retrieval-Augmented Generation",
+    "authors": "B. Author",
+    "year": 2022,
+    "page": 1,
+    "text": "Retrieval-augmented generation combines a retriever component with a language model. The retriever finds relevant documents before the model generates a response."
+  },
+  {
+    "paper_id": "p3",
+    "title": "AsterixDB Overview",
+    "authors": "C. Author",
+    "year": 2021,
+    "page": 1,
+    "text": "AsterixDB is a scalable, open-source big data management system that supports semi-structured data and SQL++ queries."
+  },
+  {
+    "paper_id": "p4",
+    "title": "Sentence Embeddings",
+    "authors": "D. Author",
+    "year": 2020,
+    "page": 1,
+    "text": "Sentence embeddings map variable length text into fixed length vectors, enabling similarity comparison via distance metrics such as cosine similarity."
+  },
+  {
+    "paper_id": "p5",
+    "title": "K-Nearest Neighbor Search",
+    "authors": "E. Author",
+    "year": 2019,
+    "page": 1,
+    "text": "K-nearest neighbor search finds the k closest points to a query point in a vector space, commonly used for classification and retrieval tasks."
+  }
+]
