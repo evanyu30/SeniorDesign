@@ -8,6 +8,10 @@ import { nativeTheme } from 'electron'
 
 let currentAbort: AbortController | null = null
 
+// The FastAPI backend. Override with BACKEND_URL in the environment once
+// this stops being localhost -- e.g. a teammate's machine, or a deployed box.
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -76,6 +80,18 @@ app.whenReady().then(() => {
   ipcMain.handle('theme:set', (_e, source: 'system' | 'light' | 'dark') => {
     nativeTheme.themeSource = source
     return nativeTheme.shouldUseDarkColors
+  })
+
+  // Temporary test handler: proves the main process can reach the FastAPI
+  // backend before /chat is wired up for real. Any non-2xx response, or a
+  // network failure (backend not running), rejects this promise -- the
+  // renderer's try/catch in handleSend is what shows that to the user.
+  ipcMain.handle('backend:health', async () => {
+    const res = await fetch(`${BACKEND_URL}/health`)
+    if (!res.ok) {
+      throw new Error(`backend responded ${res.status} ${res.statusText}`)
+    }
+    return res.json()
   })
 
   ipcMain.handle(

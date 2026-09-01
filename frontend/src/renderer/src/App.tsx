@@ -27,9 +27,13 @@ function App(): React.JSX.Element {
   const [providerId, setProviderId] = useState('')
   const [model, setModel] = useState('')
 
+  // TEMPORARY: this calls the backend's /health endpoint instead of a real
+  // chat, so we can prove Electron -> FastAPI actually works before /chat
+  // exists. The provider/model selectors below aren't used by this path --
+  // once /chat is wired up for real, this whole function gets replaced.
   const handleSend = async (): Promise<void> => {
     const text = input.trim()
-    if (!text || loading || !providerId || !model) return
+    if (!text || loading) return
 
     const next: Message[] = [...messages, { role: 'user', content: text }]
     setMessages([...next, { role: 'assistant', content: '' }])
@@ -37,10 +41,16 @@ function App(): React.JSX.Element {
     setLoading(true)
 
     try {
-      await window.api.sendChat(next, providerId, model)
+      const health = await window.api.checkBackendHealth()
+      const report = '```json\n' + JSON.stringify(health, null, 2) + '\n```'
+      setMessages((prev) => [...prev.slice(0, -1), { role: 'assistant', content: report }])
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      setMessages((prev) => [...prev.slice(0, -1), { role: 'assistant', content: `Error: ${msg}` }])
+      setMessages((prev) => [
+        ...prev.slice(0, -1),
+        { role: 'assistant', content: `**Backend unreachable**\n\n${msg}` }
+      ])
+    } finally {
       setLoading(false)
     }
   }

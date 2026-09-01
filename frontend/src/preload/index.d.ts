@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import { Message } from '../shared/types'
+import { Message, BackendHealth } from '../shared/types'
 
 export interface Api {
   getVersion: () => Promise<string>
@@ -9,6 +9,7 @@ export interface Api {
   onDone: (cb: () => void) => () => void
   abortChat: () => void
   setTheme: (source: 'system' | 'light' | 'dark') => Promise<boolean>
+  checkBackendHealth: () => Promise<BackendHealth>
 }
 
 declare global {

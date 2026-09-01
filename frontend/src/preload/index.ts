@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { Message } from '../shared/types'
+import { Message, BackendHealth } from '../shared/types'
 
 // Custom APIs for renderer
 const api = {
@@ -23,7 +23,11 @@ const api = {
 
   abortChat: (): void => ipcRenderer.send('chat:abort'),
   setTheme: (source: 'system' | 'light' | 'dark'): Promise<boolean> =>
-    ipcRenderer.invoke('theme:set', source)
+    ipcRenderer.invoke('theme:set', source),
+
+  // Temporary: proves Electron -> FastAPI plumbing works before /chat exists.
+  // Will be replaced by a streaming call to the backend's /chat endpoint.
+  checkBackendHealth: (): Promise<BackendHealth> => ipcRenderer.invoke('backend:health')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
