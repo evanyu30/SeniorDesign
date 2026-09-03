@@ -7,6 +7,7 @@ import { getProvider, providers } from './providers'
 import { nativeTheme } from 'electron'
 
 let currentAbort: AbortController | null = null
+let ragAbort: AbortController | null = null
 
 // The FastAPI backend. Override with BACKEND_URL in the environment once
 // this stops being localhost -- e.g. a teammate's machine, or a deployed box.
@@ -82,10 +83,7 @@ app.whenReady().then(() => {
     return nativeTheme.shouldUseDarkColors
   })
 
-  // Temporary test handler: proves the main process can reach the FastAPI
-  // backend before /chat is wired up for real. Any non-2xx response, or a
-  // network failure (backend not running), rejects this promise -- the
-  // renderer's try/catch in handleSend is what shows that to the user.
+  // Diagnostic: proves the main process can reach the FastAPI backend.
   ipcMain.handle('backend:health', async () => {
     const res = await fetch(`${BACKEND_URL}/health`)
     if (!res.ok) {
@@ -116,12 +114,69 @@ app.whenReady().then(() => {
     }
   )
 
+  // Consumes the backend's /chat SSE stream and re-emits each event over IPC
+  // as 'rag:<event>' (sources/token/error), plus 'rag:done' once, always.
+  ipcMain.handle('rag:chat', async (e, question: string): Promise<void> => {
+    ragAbort = new AbortController()
+    let sawDone = false
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+        signal: ragAbort.signal
+      })
+      if (!res.ok || !res.body) {
+        throw new Error(`backend responded ${res.status} ${res.statusText}`)
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        // SSE events are separated by a blank line; parse whole ones as they arrive.
+        let sep: number
+        while ((sep = buffer.indexOf('\n\n')) !== -1) {
+          const rawEvent = buffer.slice(0, sep)
+          buffer = buffer.slice(sep + 2)
+          const lines = rawEvent.split('\n')
+          const eventLine = lines.find((l) => l.startsWith('event: '))
+          const dataLine = lines.find((l) => l.startsWith('data: '))
+          if (!eventLine || !dataLine) continue
+
+          const eventName = eventLine.slice('event: '.length)
+          e.sender.send(`rag:${eventName}`, JSON.parse(dataLine.slice('data: '.length)))
+          if (eventName === 'done') sawDone = true
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        sawDone = true // user clicked Stop -- not an error to show
+      } else {
+        e.sender.send('rag:error', { detail: err instanceof Error ? err.message : String(err) })
+      }
+    } finally {
+      ragAbort = null
+      if (!sawDone) e.sender.send('rag:done', {})
+    }
+  })
+
   ipcMain.handle('providers:list', () =>
     Object.values(providers).map((p) => ({ id: p.id, models: p.models }))
   )
 
   ipcMain.on('chat:abort', () => {
     currentAbort?.abort()
+  })
+
+  ipcMain.on('rag:abort', () => {
+    ragAbort?.abort()
   })
 
   ipcMain.handle('app:getVersion', () => app.getVersion())

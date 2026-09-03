@@ -21,16 +21,6 @@ function App(): React.JSX.Element {
 
   const [loading, setLoading] = useState(false)
 
-  type ProviderInfo = { id: string; models: string[] }
-
-  const [providers, setProviders] = useState<ProviderInfo[]>([])
-  const [providerId, setProviderId] = useState('')
-  const [model, setModel] = useState('')
-
-  // TEMPORARY: this calls the backend's /health endpoint instead of a real
-  // chat, so we can prove Electron -> FastAPI actually works before /chat
-  // exists. The provider/model selectors below aren't used by this path --
-  // once /chat is wired up for real, this whole function gets replaced.
   const handleSend = async (): Promise<void> => {
     const text = input.trim()
     if (!text || loading) return
@@ -41,33 +31,55 @@ function App(): React.JSX.Element {
     setLoading(true)
 
     try {
-      const health = await window.api.checkBackendHealth()
-      const report = '```json\n' + JSON.stringify(health, null, 2) + '\n```'
-      setMessages((prev) => [...prev.slice(0, -1), { role: 'assistant', content: report }])
+      // Resolves once the whole SSE stream has ended -- the actual text
+      // arrives incrementally through the rag:* listeners below.
+      await window.api.sendRagChat(text)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setMessages((prev) => [
         ...prev.slice(0, -1),
         { role: 'assistant', content: `**Backend unreachable**\n\n${msg}` }
       ])
-    } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    const offChunk = window.api.onChunk((delta) => {
+    // sources arrives first: show what was retrieved before any answer text exists.
+    const offSources = window.api.onRagSources(({ results }) => {
+      if (results.length === 0) return
+      const list = results
+        .map((r, i) => `${i + 1}. **${r.title ?? r.paper_id}**${r.score != null ? ` (score ${r.score.toFixed(2)})` : ''}`)
+        .join('\n')
       setMessages((prev) => {
         const last = prev[prev.length - 1]
         if (!last || last.role !== 'assistant') return prev
-        return [...prev.slice(0, -1), { ...last, content: last.content + delta }]
+        return [...prev.slice(0, -1), { ...last, content: `**Sources**\n${list}\n\n---\n\n` }]
       })
     })
 
-    const offDone = window.api.onDone(() => setLoading(false))
+    const offToken = window.api.onRagToken((text) => {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1]
+        if (!last || last.role !== 'assistant') return prev
+        return [...prev.slice(0, -1), { ...last, content: last.content + text }]
+      })
+    })
+
+    const offError = window.api.onRagError((detail) => {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1]
+        if (!last || last.role !== 'assistant') return prev
+        return [...prev.slice(0, -1), { ...last, content: last.content + `\n\n**Error:** ${detail}` }]
+      })
+    })
+
+    const offDone = window.api.onRagDone(() => setLoading(false))
 
     return () => {
-      offChunk()
+      offSources()
+      offToken()
+      offError()
       offDone()
     }
   }, [])
@@ -77,24 +89,6 @@ function App(): React.JSX.Element {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  const handleProviderChange = (id: string): void => {
-    setProviderId(id)
-    const next = providers.find((p) => p.id === id)
-    setModel(next?.models[0] ?? '')
-  }
-
-  const currentModels = providers.find((p) => p.id === providerId)?.models ?? []
-
-  useEffect(() => {
-    window.api.listProviders().then((list) => {
-      setProviders(list)
-      if (list.length > 0) {
-        setProviderId(list[0].id)
-        setModel(list[0].models[0])
-      }
-    })
-  }, [])
 
   return (
     <>
@@ -111,25 +105,6 @@ function App(): React.JSX.Element {
         <div ref={bottomRef} />
       </div>
       <div className="toolbar">
-        <select
-          value={providerId}
-          onChange={(e) => handleProviderChange(e.target.value)}
-          disabled={loading}
-        >
-          {providers.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.id}
-            </option>
-          ))}
-        </select>
-
-        <select value={model} onChange={(e) => setModel(e.target.value)} disabled={loading}>
-          {currentModels.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
         <select value={theme} onChange={(e) => handleThemeChange(e.target.value as ThemeSource)}>
           <option value="system">auto</option>
           <option value="light">light</option>
@@ -143,7 +118,7 @@ function App(): React.JSX.Element {
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Ask anything..."
         />
-        <button onClick={loading ? () => window.api.abortChat() : handleSend}>
+        <button onClick={loading ? () => window.api.abortRagChat() : handleSend}>
           {loading ? 'Stop' : 'Send'}
         </button>
       </div>
