@@ -7,6 +7,10 @@ from __future__ import annotations
 
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()  # reads a .env file in the current directory, if one exists
+
 
 def _env(key: str, default: str) -> str:
     return os.environ.get(key, default).strip()
@@ -29,6 +33,11 @@ class Settings:
     DEFAULT_K: int = int(_env("DEFAULT_K", "8"))
     MAX_K: int = int(_env("MAX_K", "50"))
     DEFAULT_METRIC: str = _env("DEFAULT_METRIC", "COSINE")
+
+    # /chat's LLM. No default key -- /chat reports 503 until this is set.
+    ANTHROPIC_API_KEY: str = _env("ANTHROPIC_API_KEY", "")
+    CHAT_MODEL: str = _env("CHAT_MODEL", "claude-sonnet-4-5")
+    CHAT_MAX_TOKENS: int = int(_env("CHAT_MAX_TOKENS", "1024"))
 
 
 settings = Settings()
