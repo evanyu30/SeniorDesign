@@ -1,40 +1,43 @@
 /* ============================================================
    Renderer stylesheet
    A quiet, print-inspired interface for retrieval-augmented
-   research: paper-toned surfaces, typeset prose, hairline
+   research: cool graph-paper surfaces, typeset prose, hairline
    rules, and instrument-panel chrome.
    ============================================================ */
 
 /* ---------- 1. Design tokens ---------- */
 
 :root {
-  /* Surfaces — warm archival paper */
-  --paper: #f5f3ee;
-  --paper-raised: #fdfcf9;
-  --paper-sunken: #efece4;
+  /* Surfaces — cool graph-paper, not warm library paper */
+  --paper: #f4f6f8;
+  --paper-raised: #ffffff;
+  --paper-sunken: #e8edf1;
 
   /* Ink */
-  --ink: #1b1e1d;
-  --ink-soft: #63696a;
-  --ink-faint: #9aa09f;
+  --ink: #14181c;
+  --ink-soft: #57626a;
+  --ink-faint: #8a949c;
 
   /* Rules */
-  --rule: #e0dcd2;
-  --rule-strong: #c9c4b7;
+  --rule: #dbe2e7;
+  --rule-strong: #b7c1c9;
 
-  /* Accents — viridian (primary) + ochre (citation) */
-  --accent: #1f5d54;
-  --accent-bright: #2b7a6e;
-  --accent-wash: rgba(31, 93, 84, 0.08);
-  --ochre: #8a5a1c;
+  /* Accents — research blue (primary, instrument/data) + ochre (citation) */
+  --accent: #1d5c9e;
+  --accent-bright: #2f78c4;
+  --accent-wash: rgba(29, 92, 158, 0.08);
+  --ochre: #a85f14;
 
   /* Typography */
-  --font-serif: ui-serif, 'New York', 'Iowan Old Style', Charter, 'Palatino Linotype',
-    'Book Antiqua', Georgia, 'Times New Roman', serif;
-  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, Inter, 'Segoe UI', Roboto,
-    system-ui, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, 'Cascadia Mono', 'Roboto Mono',
-    Consolas, monospace;
+  --font-serif:
+    ui-serif, 'New York', 'Iowan Old Style', Charter, 'Palatino Linotype', 'Book Antiqua', Georgia,
+    'Times New Roman', serif;
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, Inter, 'Segoe UI', Roboto, system-ui,
+    sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', SFMono-Regular, Menlo, 'Cascadia Mono', 'Roboto Mono', Consolas,
+    monospace;
 
   /* Metrics */
   --column: 760px;
@@ -43,28 +46,28 @@
   --radius-lg: 8px;
 
   /* Elevation — barely there, like paper on paper */
-  --lift: 0 1px 2px rgba(27, 30, 29, 0.05), 0 6px 18px rgba(27, 30, 29, 0.045);
+  --lift: 0 1px 2px rgba(20, 24, 28, 0.05), 0 6px 18px rgba(20, 24, 28, 0.045);
 
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #0f1315;
-    --paper-raised: #171c1f;
-    --paper-sunken: #0b0e10;
+    --paper: #0d1117;
+    --paper-raised: #161b22;
+    --paper-sunken: #090c10;
 
-    --ink: #e7e5de;
-    --ink-soft: #9aa3a2;
-    --ink-faint: #6a7473;
+    --ink: #e6edf3;
+    --ink-soft: #97a3ac;
+    --ink-faint: #6a767f;
 
-    --rule: #262d30;
-    --rule-strong: #39423f;
+    --rule: #21262d;
+    --rule-strong: #30383f;
 
-    --accent: #74c3b3;
-    --accent-bright: #8fd6c6;
-    --accent-wash: rgba(116, 195, 179, 0.1);
-    --ochre: #cfa25c;
+    --accent: #4d9fe8;
+    --accent-bright: #6fb6f2;
+    --accent-wash: rgba(77, 159, 232, 0.12);
+    --ochre: #e0a458;
 
     --lift: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 22px rgba(0, 0, 0, 0.28);
   }
@@ -115,6 +118,19 @@ body {
   flex-direction: column;
 }
 
+/* ---------- 2a. Title bar (drag region) ---------- */
+/* Fills in for the native title bar we hid in main/index.ts (titleBarStyle:
+   'hidden'). The whole strip is draggable; nothing inside it is interactive,
+   so no-drag exceptions aren't needed yet -- add them here if that changes. */
+
+.titlebar {
+  -webkit-app-region: drag;
+  flex: 0 0 auto;
+  height: 38px;
+  background: color-mix(in srgb, var(--paper-sunken) 55%, transparent);
+  border-bottom: 1px solid var(--rule);
+}
+
 /* ---------- 3. Transcript ---------- */
 
 .messages {
@@ -122,7 +138,7 @@ body {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 44px 0 28px;
+  padding: 30px 0 28px;
   scrollbar-width: thin;
   scrollbar-color: var(--rule-strong) transparent;
 }
@@ -439,6 +455,31 @@ body {
   box-shadow: var(--lift);
 }
 
+/* Sources list: the <ol> that /chat's "sources" event renders, always
+   followed by an <hr> separating it from the answer -- that shape is what
+   :has() targets below, so no extra markup is needed on the React side. */
+.msg.assistant ol:has(+ hr) {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.msg.assistant ol:has(+ hr) li {
+  padding: 6px 10px;
+  border-left: 2px solid var(--ochre);
+  background: color-mix(in srgb, var(--ochre) 6%, transparent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--ink-soft);
+}
+
+.msg.assistant ol:has(+ hr) li strong {
+  color: var(--ink);
+}
+
 /* ---------- 5. Instrument panel ---------- */
 
 .toolbar {
@@ -452,7 +493,7 @@ body {
 }
 
 .toolbar::before {
-  content: 'Engine';
+  content: 'Theme';
   font-family: var(--font-mono);
   font-size: 9.5px;
   font-weight: 500;

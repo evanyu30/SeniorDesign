@@ -1,33 +1,13 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { Message, BackendHealth, ChatSource } from '../shared/types'
+import { ChatSource } from '../shared/types'
 
 // Custom APIs for renderer
 const api = {
-  getVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
-  sendChat: (messages: Message[], providerId: string, model: string): Promise<void> =>
-    ipcRenderer.invoke('chat:send', messages, providerId, model),
-  listProviders: (): Promise<{ id: string; models: string[] }[]> =>
-    ipcRenderer.invoke('providers:list'),
-  onChunk: (cb: (delta: string) => void): (() => void) => {
-    const listener = (_e: IpcRendererEvent, delta: string): void => cb(delta)
-    ipcRenderer.on('chat:chunk', listener)
-    return () => ipcRenderer.removeListener('chat:chunk', listener)
-  },
-
-  onDone: (cb: () => void): (() => void) => {
-    const listener = (): void => cb()
-    ipcRenderer.on('chat:done', listener)
-    return () => ipcRenderer.removeListener('chat:done', listener)
-  },
-
-  abortChat: (): void => ipcRenderer.send('chat:abort'),
   setTheme: (source: 'system' | 'light' | 'dark'): Promise<boolean> =>
     ipcRenderer.invoke('theme:set', source),
 
-  checkBackendHealth: (): Promise<BackendHealth> => ipcRenderer.invoke('backend:health'),
-
-  // The real RAG chat: sends a question, then the events below stream the answer.
+  // The RAG chat: sends a question, then the events below stream the answer.
   sendRagChat: (question: string): Promise<void> => ipcRenderer.invoke('rag:chat', question),
   abortRagChat: (): void => ipcRenderer.send('rag:abort'),
 

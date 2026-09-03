@@ -92,6 +92,7 @@ function App(): React.JSX.Element {
 
   return (
     <>
+      <div className="titlebar" />
       <div className="messages">
         {messages.map((m, i) => (
           <div key={i} className={`msg ${m.role}`}>

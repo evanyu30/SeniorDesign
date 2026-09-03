@@ -1,110 +1,72 @@
-# LLMChatUI
+# KNN AsterixDB RAG — Frontend
 
-A minimal, hackable desktop chat client for LLMs. Built with Electron, React, and TypeScript.
+An Electron + React desktop client for a retrieval-augmented research assistant. It is the UI half of a two-part senior design project: this app handles input, streaming display, and window chrome; a separate Python/FastAPI backend (`../backend`) handles retrieval (AsterixDB, exact k-NN over embeddings) and answer generation (Claude).
 
-Not trying to be a polished product — it's a small, readable codebase you can fork and bend to whatever you need. Swap providers, add tools, wire it into another project. Everything fits in a few hundred lines.
+This app holds no API keys and never talks to AsterixDB or an LLM directly — it only ever calls its own backend's HTTP API.
 
-## Features
+## Graphical User Interface and Theme
 
-- **Streaming responses** — tokens render as they arrive, with mid-generation cancel
-- **Multiple providers** — OpenAI and Anthropic, switchable per message
-- **Shared conversation history** — switch models mid-conversation without losing context
-- **API keys never reach the renderer** — all provider calls happen in the main process
-
-## Screenshot
-
-![Chat window](docs/screenshot.png)
+![ChatUI](docs/screenshot-light.png)
+![ChatUI](docs/screenshot-dark.png)
 
 ## Getting started
 
+The backend must be running first — see `../backend/README.md`. By default this app expects it at `http://localhost:8000`; override with the `BACKEND_URL` environment variable if it runs elsewhere.
+
 ```bash
-git clone https://github.com/<you>/LLMChatUI.git
-cd LLMChatUI
 npm install
-```
-
-Copy the env template and fill in whichever keys you have:
-
-```bash
-cp .env.example .env
-```
-
-```
-MAIN_VITE_OPENAI_API_KEY=sk-...
-MAIN_VITE_ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Then:
-
-```bash
 npm run dev
 ```
 
-> The `MAIN_VITE_` prefix matters. electron-vite only injects variables with that prefix into the **main process** — a `RENDERER_VITE_` prefix would compile the key into the frontend bundle, where anything running in the page could read it.
+## How a question becomes an answer
+
+1. User types a question and hits Send.
+2. Renderer calls `window.api.sendRagChat(question)` over IPC.
+3. Main process `POST`s to the backend's `/chat`, which returns a Server-Sent Events stream.
+4. Main process parses each SSE event and re-emits it over IPC as `rag:sources`, `rag:token`, `rag:error`, or `rag:done`.
+5. Renderer listens for those events: `sources` renders the retrieved chunks first, `token` appends streamed answer text as it arrives, `done` clears the loading state.
+
+The backend is the only thing that knows about AsterixDB or the LLM provider; this app just relays.
 
 ## Architecture
 
-Electron splits an app across three contexts, and this project keeps that split explicit:
-
 ```
 src/
-├── main/                  Node.js — full system access
-│   ├── index.ts           window lifecycle, IPC handlers, menu
-│   └── providers/         one file per LLM vendor
-│       ├── types.ts       the Provider interface
-│       ├── openai.ts
-│       ├── anthropic.ts
-│       └── index.ts       registry
-├── preload/               the bridge — the only path between the two
+├── main/               Node.js — window lifecycle, IPC handlers
+│   └── index.ts          theme:set, rag:chat (SSE relay), rag:abort
+├── preload/             the bridge — the only path between main and renderer
 │   ├── index.ts           contextBridge allowlist
 │   └── index.d.ts         type declarations for window.api
-├── renderer/              Chromium — UI only, no Node, no secrets
+├── renderer/            Chromium — UI only, no Node, no secrets
 │   └── src/App.tsx
-└── shared/                types imported by both sides
+└── shared/              types imported by both sides
     └── types.ts
 ```
 
-### Why provider calls live in the main process
-
-The renderer is a browser page. It loads content, and in the threat model that makes it the untrusted side — an injected script or a compromised dependency could read anything in its scope. An API key sitting there would also ship in plain text inside the packaged `app.asar`, extractable with a single command.
-
-So the renderer never sees a key. It sends a message array across IPC; the main process holds the credentials and makes the call.
-
 ### IPC channels
 
-Two directions, because streaming needs both:
+| Channel       | Mechanism           | Direction       | Purpose                                       |
+| ------------- | ------------------- | --------------- | --------------------------------------------- |
+| `theme:set`   | `invoke` / `handle` | renderer → main | switch light / dark / system theme            |
+| `rag:chat`    | `invoke` / `handle` | renderer → main | ask a question                                |
+| `rag:sources` | `send` / `on`       | main → renderer | retrieved chunks, sent before any answer text |
+| `rag:token`   | `send` / `on`       | main → renderer | one piece of streamed answer text             |
+| `rag:error`   | `send` / `on`       | main → renderer | something failed mid-stream                   |
+| `rag:done`    | `send` / `on`       | main → renderer | stream finished (always fires exactly once)   |
+| `rag:abort`   | `send`              | renderer → main | cancel the in-flight request                  |
 
-| Channel          | Mechanism           | Direction       | Purpose            |
-| ---------------- | ------------------- | --------------- | ------------------ |
-| `chat:send`      | `invoke` / `handle` | renderer → main | start a completion |
-| `chat:chunk`     | `send` / `on`       | main → renderer | one token delta    |
-| `chat:done`      | `send` / `on`       | main → renderer | stream finished    |
-| `chat:abort`     | `send` / `on`       | renderer → main | cancel in flight   |
-| `providers:list` | `invoke` / `handle` | renderer → main | available models   |
+`rag:chat` is `invoke`/`handle` so the renderer can `await` it, but the actual answer text arrives incrementally through the `rag:*` events above, not in that return value.
 
-`invoke/handle` is request–response and returns exactly one value, which doesn't fit a token stream. So `chat:send` kicks things off and the deltas come back over a separate one-way channel.
+## Window chrome
 
-### Adding a provider
-
-Implement one interface:
-
-```ts
-export interface Provider {
-  id: string
-  models: string[]
-  chat: (opts: ChatOptions) => Promise<void>
-}
-```
-
-`chat` receives a `onDelta` callback and an `AbortSignal` and is responsible for nothing else — the caller owns cancellation, IPC, and UI state. Vendor quirks stay contained: Anthropic requires `max_tokens` and emits typed stream events, OpenAI doesn't and doesn't. Neither detail leaks past the provider file.
-
-Register it in `src/main/providers/index.ts` and it appears in the UI automatically — the model picker is populated from `providers:list`, so no frontend changes are needed.
+The native title bar is hidden (`titleBarStyle: 'hidden'` in `main/index.ts`, macOS only). `.titlebar` in `main.css` is a plain draggable strip standing in for it (`-webkit-app-region: drag`), since hiding the title bar also removes the window's only way to be dragged.
 
 ## Scripts
 
 ```bash
 npm run dev          # dev server + Electron with HMR
-npm run build        # typecheck and build
+npm run typecheck    # tsc, no emit
+npm run build         # typecheck and build
 npm run build:mac    # package for macOS
 npm run build:win    # package for Windows
 npm run build:linux  # package for Linux
@@ -112,19 +74,10 @@ npm run build:linux  # package for Linux
 
 ## Not built yet
 
-Deliberately out of scope for now, roughly in order of usefulness:
-
-- Conversation persistence and multiple sessions
-- Syntax highlighting
-- System prompts (needs a small `ChatOptions` addition — Anthropic takes `system` as a top-level parameter, OpenAI takes it as a message)
-- Local models via Ollama (works through the OpenAI SDK with a different `baseURL`)
-- Settings UI, with keys stored via `safeStorage` instead of `.env`
-- Token counting and cost estimates
+- Conversation persistence across app restarts
+- Showing more than title + score for each retrieved source (no chunk text/page preview yet)
+- A settings UI for `BACKEND_URL` (environment variable only, for now)
 
 ## Built with
 
 [Electron](https://www.electronjs.org/) · [electron-vite](https://electron-vite.org/) · [React](https://react.dev/) · [TypeScript](https://www.typescriptlang.org/)
-
-## License
-
-MIT

@@ -2,24 +2,24 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { Message } from '../shared/types'
-import { getProvider, providers } from './providers'
 import { nativeTheme } from 'electron'
 
-let currentAbort: AbortController | null = null
 let ragAbort: AbortController | null = null
 
 // The FastAPI backend. Override with BACKEND_URL in the environment once
-// this stops being localhost -- e.g. a teammate's machine, or a deployed box.
+// this stops being localhost.
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'
 
 function createWindow(): void {
-  // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
     autoHideMenuBar: true,
+    // Hides the native title bar (macOS only) so the window looks custom --
+    // traffic lights stay, everything else is drawn by our own CSS.
+    titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
+    trafficLightPosition: { x: 14, y: 14 },
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -52,67 +52,17 @@ function createWindow(): void {
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window, { zoom: true })
   })
-
-  // Menu.setApplicationMenu(
-  //   Menu.buildFromTemplate([
-  //     { role: 'appMenu' },
-  //     { role: 'editMenu' },
-  //     { role: 'viewMenu' },
-  //     { role: 'windowMenu' }
-  //   ])
-  // )
-
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
 
   ipcMain.handle('theme:set', (_e, source: 'system' | 'light' | 'dark') => {
     nativeTheme.themeSource = source
     return nativeTheme.shouldUseDarkColors
   })
-
-  // Diagnostic: proves the main process can reach the FastAPI backend.
-  ipcMain.handle('backend:health', async () => {
-    const res = await fetch(`${BACKEND_URL}/health`)
-    if (!res.ok) {
-      throw new Error(`backend responded ${res.status} ${res.statusText}`)
-    }
-    return res.json()
-  })
-
-  ipcMain.handle(
-    'chat:send',
-    async (e, messages: Message[], providerId: string, model: string): Promise<void> => {
-      currentAbort = new AbortController()
-      console.log('provider:', providerId, 'model:', model)
-
-      try {
-        await getProvider(providerId).chat({
-          messages,
-          model,
-          onDelta: (text) => e.sender.send('chat:chunk', text),
-          signal: currentAbort.signal
-        })
-      } catch (err) {
-        if (!(err instanceof Error && err.name === 'AbortError')) throw err
-      } finally {
-        currentAbort = null
-        e.sender.send('chat:done')
-      }
-    }
-  )
 
   // Consumes the backend's /chat SSE stream and re-emits each event over IPC
   // as 'rag:<event>' (sources/token/error), plus 'rag:done' once, always.
@@ -167,19 +117,9 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('providers:list', () =>
-    Object.values(providers).map((p) => ({ id: p.id, models: p.models }))
-  )
-
-  ipcMain.on('chat:abort', () => {
-    currentAbort?.abort()
-  })
-
   ipcMain.on('rag:abort', () => {
     ragAbort?.abort()
   })
-
-  ipcMain.handle('app:getVersion', () => app.getVersion())
 
   createWindow()
 
@@ -190,14 +130,9 @@ app.whenReady().then(() => {
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+// Quit when all windows are closed, except on macOS.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
