@@ -1,9 +1,7 @@
-"""Loads chunked paper text into ResearchCorpus.paperChunks.
+"""Loads chunked paper text into AsterixDB.
 
-Run from backend/:  python -m scripts.load_corpus [path-to-chunks.json]
-Defaults to data/sample_chunks.json -- placeholder text for testing the
-pipeline before real paper chunks exist. Swap in a real JSON file later,
-same shape: [{paper_id, title, authors, year, page, text}, ...].
+Run: python -m scripts.load_corpus [path.json]
+Defaults to data/sample_chunks.json -- placeholder data for testing.
 """
 
 from __future__ import annotations
@@ -26,8 +24,7 @@ CREATE DATASET {settings.ASTERIX_DATASET}(ChunkType) IF NOT EXISTS PRIMARY KEY i
 
 
 def _post(statement: str) -> dict:
-    # Same call shape as AsterixStore._query -- no ChunkStore involved, this
-    # script only ever writes, and ChunkStore is read-only on purpose.
+    # Writes directly -- ChunkStore is read-only on purpose.
     resp = httpx.post(settings.ASTERIX_URL, json={"statement": statement, "format": "JSON"}, timeout=60)
     payload = resp.json()
     if payload.get("errors"):

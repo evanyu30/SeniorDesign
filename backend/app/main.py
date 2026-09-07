@@ -1,6 +1,6 @@
 """The API the Electron app will talk to.
 
-    STORE=asterix uvicorn app.main:app --reload --port 8000
+    uvicorn app.main:app --reload --port 8000
 """
 
 from __future__ import annotations

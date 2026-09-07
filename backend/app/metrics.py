@@ -1,8 +1,7 @@
-"""The six distance metrics the KNN AsterixDB accepts.
+"""Distance metrics the AsterixDB fork accepts.
 
-The KNN AsterixDB resolves vector_distance()'s metric argument at parse time, so it
-can never be bound as a parameter -- it must be pasted into the statement.
-Checking it against SUPPORTED_METRICS first is what makes that safe.
+The metric can't be a query parameter -- the fork resolves it at parse
+time -- so it's checked against SUPPORTED_METRICS before use.
 """
 
 from __future__ import annotations
