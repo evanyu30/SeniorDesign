@@ -4,7 +4,7 @@ A FastAPI service that answers questions over a paper corpus using retrieval-aug
 
 ## Depends on
 
-- **AsterixDB**, running locally with the vector-distance fork: https://github.com/calvin-dani/asterixdb-schema-knn.git (someone else's part of the project — this backend just assumes it's up on `:19002`).
+- **AsterixDB**, running locally with the vector-distance fork: https://github.com/calvin-dani/asterixdb-schema-knn.git
 - **Python 3.11+**
 - An **Anthropic API key**, for `/chat`'s answer generation.
 
